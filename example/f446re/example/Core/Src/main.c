@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "../../../../../lib/ws2812_dma.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,6 +41,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
+DMA_HandleTypeDef hdma_tim1_ch1;
+DMA_HandleTypeDef hdma_tim1_ch2;
 
 UART_HandleTypeDef huart2;
 
@@ -51,6 +53,7 @@ UART_HandleTypeDef huart2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
@@ -60,6 +63,16 @@ static void MX_USART2_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+#define STRAND1_LEDS 2
+#define STRAND2_LEDS 12
+
+uint16_t b1[24 * STRAND1_LEDS + WS2812_RESET_PULSE] = {0};
+uint16_t b2[24 * STRAND2_LEDS + WS2812_RESET_PULSE] = {0};
+
+WS2812_Strand s1 = {&htim1, TIM_CHANNEL_1, b1, STRAND1_LEDS, 24 * STRAND1_LEDS + RESET};
+WS2812_Strand s2 = {&htim1, TIM_CHANNEL_2, b2, STRAND2_LEDS, 24 * STRAND2_LEDS + RESET};
+
+WS2812_Strand* myChain[] = {&s1, &s2};
 /* USER CODE END 0 */
 
 /**
@@ -91,10 +104,16 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_TIM1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  __HAL_TIM_MOE_ENABLE(&htim1);
 
+  WS2812_SetColor(&s1, 0, COLOR_ORANGE, 128); // 50% brightness
+  WS2812_SetPixel(&s2, 5, 0, 255, 0, 255);    // Full green
+
+  WS2812_StartChain(myChain, 2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -177,7 +196,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65535;
+  htim1.Init.Period = 62;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -267,6 +286,25 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA2_Stream1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+  /* DMA2_Stream2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -306,7 +344,11 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
+{
+  // Leitet das DMA-Fertig-Signal an den Library-Manager weiter
+  WS2812_HandleCallback(htim);
+}
 /* USER CODE END 4 */
 
 /**
