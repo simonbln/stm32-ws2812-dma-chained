@@ -69,8 +69,8 @@ static void MX_USART2_UART_Init(void);
 uint16_t b1[24 * STRAND1_LEDS + WS2812_RESET_PULSE] = {0};
 uint16_t b2[24 * STRAND2_LEDS + WS2812_RESET_PULSE] = {0};
 
-WS2812_Strand s1 = {&htim1, TIM_CHANNEL_1, b1, STRAND1_LEDS, 24 * STRAND1_LEDS + RESET};
-WS2812_Strand s2 = {&htim1, TIM_CHANNEL_2, b2, STRAND2_LEDS, 24 * STRAND2_LEDS + RESET};
+WS2812_Strand s1 = {&htim1, TIM_CHANNEL_1, b1, STRAND1_LEDS, 24 * STRAND1_LEDS + WS2812_RESET_PULSE};
+WS2812_Strand s2 = {&htim1, TIM_CHANNEL_2, b2, STRAND2_LEDS, 24 * STRAND2_LEDS + WS2812_RESET_PULSE};
 
 WS2812_Strand* myChain[] = {&s1, &s2};
 /* USER CODE END 0 */
@@ -110,21 +110,55 @@ int main(void)
   /* USER CODE BEGIN 2 */
   __HAL_TIM_MOE_ENABLE(&htim1);
 
-  WS2812_SetColor(&s1, 0, COLOR_ORANGE, 128); // 50% brightness
-  WS2812_SetPixel(&s2, 5, 0, 255, 0, 255);    // Full green
-
-  WS2812_StartChain(myChain, 2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
+  /* Infinite loop */
+    /* USER CODE BEGIN WHILE */
+    uint8_t blinkState = 0;
+    uint8_t frameCounter = 0;
 
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+    while (1)
+    {
+      /* USER CODE END WHILE */
+
+      /* USER CODE BEGIN 3 */
+
+      // --- STRAND 1: Blinker Logic (2 LEDs) ---
+      // Toggle between Orange and Off every loop iteration
+      blinkState = !blinkState;
+      if (blinkState) {
+          WS2812_SetColor(&s1, 0, COLOR_RED, 100);
+          WS2812_SetColor(&s1, 1, COLOR_OFF, 0);
+      } else {
+          WS2812_SetColor(&s1, 0, COLOR_OFF, 0);
+          WS2812_SetColor(&s1, 1, COLOR_CYAN, 100);
+      }
+
+      // --- STRAND 2: Animation / Status Logic (12 LEDs) ---
+      // Clear all LEDs in Strand 2 first
+      for(int i = 0; i < STRAND2_LEDS; i++) {
+          WS2812_SetColor(&s2, i, COLOR_OFF, 0);
+      }
+
+      // Draw a moving pixel using SetPixel (manual RGB: Green)
+      // Uses frameCounter to move the position
+      uint8_t currentPos = frameCounter % STRAND2_LEDS;
+      WS2812_SetPixel(&s2, currentPos, 0, 255, 0, 150);
+
+      // Add a static blue LED at the end using SetColor
+      WS2812_SetColor(&s2, 11, COLOR_BLUE, 50);
+
+      // --- START TRANSMISSION ---
+      // This starts the DMA chain (Strand 1 -> Callback -> Strand 2)
+      WS2812_StartChain(myChain, 2);
+
+      // Cycle timing: 500ms for a visible blink/animation speed
+      HAL_Delay(500);
+      frameCounter++;
+
+    }
+    /* USER CODE END 3 */
 }
 
 /**
@@ -196,7 +230,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 62;
+  htim1.Init.Period = 61;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;

@@ -1,5 +1,4 @@
 #include "ws2812_dma.h"
-#include <stddef.h>
 
 static WS2812_Strand** _strands = NULL;
 static uint8_t _numStrands = 0;
@@ -9,16 +8,22 @@ static volatile uint8_t _isBusy = 0;
 void WS2812_SetPixel(WS2812_Strand* strand, uint16_t index, uint8_t r, uint8_t g, uint8_t b, uint8_t brightness) {
     if (index >= strand->ledCount) return;
 
-    // Scale RGB values by brightness (0-255)
+    // Helligkeit skalieren (0-255)
     uint8_t rs = (uint16_t)(r * brightness) >> 8;
     uint8_t gs = (uint16_t)(g * brightness) >> 8;
     uint8_t bs = (uint16_t)(b * brightness) >> 8;
 
     uint32_t color = (gs << 16) | (rs << 8) | bs;
     
-    // Dynamic timing based on Timer Auto-Reload Register
-    uint16_t high = (strand->htim->Instance->ARR * 2) / 3;
-    uint16_t low  = (strand->htim->Instance->ARR * 1) / 3;
+    // Dynamic calculation based on current ARR
+	// Period length is (ARR + 1)
+	uint16_t period = strand->htim->Instance->ARR + 1;
+
+	// "1" Bit: ~66% of (ARR + 1)
+	// "0" Bit: ~33% of (ARR + 1)
+	// Calculate (period * n) / 3 for precision without floating point
+	uint16_t high = (period * 2) / 3;
+	uint16_t low  = (period * 1) / 3;
 
     for (int i = 23; i >= 0; i--) {
         strand->pwmBuffer[index * 24 + (23 - i)] = (color & (1UL << i)) ? high : low;
@@ -49,21 +54,28 @@ void WS2812_StartChain(WS2812_Strand** strandArray, uint8_t numStrands) {
     _currentIdx = 0;
     _isBusy = 1;
 
+    // Ersten Strang der Kette starten
     HAL_TIM_PWM_Start_DMA(_strands[0]->htim, _strands[0]->channel, 
                          (uint32_t*)_strands[0]->pwmBuffer, _strands[0]->totalSize);
 }
 
 void WS2812_HandleCallback(TIM_HandleTypeDef* htim) {
-    if (!_isBusy) return;
+    if (!_isBusy || _strands == NULL) return;
 
+    // Prüfen, ob der Interrupt vom aktuellen Timer der Kette kommt
     if (htim->Instance == _strands[_currentIdx]->htim->Instance) {
+
+        // Aktuellen DMA-Transfer stoppen
         HAL_TIM_PWM_Stop_DMA(_strands[_currentIdx]->htim, _strands[_currentIdx]->channel);
         
         _currentIdx++;
+
         if (_currentIdx < _numStrands) {
+            // Nächsten Strang starten
             HAL_TIM_PWM_Start_DMA(_strands[_currentIdx]->htim, _strands[_currentIdx]->channel, 
                                  (uint32_t*)_strands[_currentIdx]->pwmBuffer, _strands[_currentIdx]->totalSize);
         } else {
+            // Kette fertig
             _isBusy = 0;
         }
     }
