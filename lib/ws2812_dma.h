@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Simonbln. Apache 2.0 license. See LICENSE file.
+
 #ifndef WS2812_DMA_H
 #define WS2812_DMA_H
 
