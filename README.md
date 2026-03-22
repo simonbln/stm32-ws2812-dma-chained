@@ -1,5 +1,5 @@
 # stm32-ws2812-dma-chained
-A high-performance C library for driving multiple WS2812 LED strands on STM32 using a chained DMA approach. Minimizes CPU overhead by sequentially updating strips via PWM and DMA callbacks.
+A high-performance C library for driving multiple WS2812 LED strands on STM32 using a chained DMA approach. This library is built on the STM32Cube HAL framework and minimizes CPU overhead by sequentially updating strips via PWM and DMA callbacks.
 
 ## Table of Contents
 1. [Components](#components)
@@ -28,7 +28,7 @@ To drive multiple strands, you can either use multiple channels on the **same ti
 - **Prescaler:** `0` (Maximum resolution)
 - **Counter Mode:** `Up`
 - **Period (ARR):** `61` (For 50 MHz Clock to reach **800 kHz**)
-    - *Formula:* $ARR = (\text{TimerClock} / 800,000) - 1$
+    - **Formula:** `ARR = (TimerClock / 800,000) - 1`
 - **PWM Generation:** `PWM Mode 1`, Polarity `High`
 
 ![Config Timer e.g. TIM1 for two strands](docu/config_cube_f446re1.png)
@@ -61,10 +61,11 @@ The library utilizes a non-blocking DMA chaining mechanism. Once a strand finish
 - **Color Depth:** 24-bit GRB per LED.
 
 ## Bit Timing Logic
-The library calculates high/low times based on the Timer Period ($ARR + 1$):
-- **Period:** $ARR + 1$ (e.g., 62 Ticks @ 50 MHz)
-- **Logical "1":** $\approx 66\%$ duty cycle $\rightarrow$ `(period * 2) / 3`
-- **Logical "0":** $\approx 33\%$ duty cycle $\rightarrow$ `(period * 1) / 3`
+The library calculates high/low times based on the Timer Period (`ARR + 1`):
+- **Period:** `ARR + 1` (e.g., 62 Ticks @ 50 MHz)
+- **Formula:** `ARR = (TimerClock / 800,000) - 1`
+- **Logical "1":** ≈66% duty cycle → `(period * 2) / 3`
+- **Logical "0":** ≈33% duty cycle → `(period * 1) / 3`
 
 ## How-To
 
@@ -107,12 +108,18 @@ WS2812_SetColor(&s2, 1, COLOR_RED, 128);    // LED 1: Red, 50% brightness
 ```
 
 ### Update chain
+After you have set all colors, you need to update the chain by calling:
+```c
 WS2812_StartChain(myChain, 2);
+```
 
+That't it!
 
 ### Example
 Take a look at the example for nucleo f446re in the repo.
 
+
+## Important: Advanced Timers
 When using **Advanced Control Timers** (such as **TIM1** or **TIM8**) on STM32, the PWM signals will not reach the output pins by default, even if the DMA and Timer are running correctly. 
 
 You must manually enable the **Main Output Enable (MOE)** bit. Without this step, the pins remain in a high-impedance state, and no signal will be visible on an oscilloscope or the LEDs.
@@ -125,6 +132,7 @@ Add the following line to your `main.c` inside the initialization section:
 __HAL_TIM_MOE_ENABLE(&htim1); 
 /* USER CODE END 2 */
 ```
+
 
 ## Support me
 If you find this project helpful and would like to support my work, I would be very grateful for a contribution via GitHub Sponsors or in Bitcoin (BTC) / Litecoin (LTC). Every bit of support helps me to keep creating and sharing new projects. Thank you!
