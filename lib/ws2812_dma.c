@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Simonbln. Apache 2.0 license. See LICENSE file.
+
 #include "ws2812_dma.h"
 
 static WS2812_Strand** _strands = NULL;
