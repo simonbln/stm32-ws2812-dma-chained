@@ -143,6 +143,11 @@ ltc1qx2yf4cndqr2zf3vfd7l2ywm5hylvhm0a8jrxry
 ![LTC QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ltc1qx2yf4cndqr2zf3vfd7l2ywm5hylvhm0a8jrxry)
 
 ### BTC: 
-bc1qd2n20g6phmnkxcdhrznqfes3mdxefpslywy67v
+bc1q5yga8eluxk7cn4pc7k36lwee06mwt5gtre8nrm
 
-![LTC QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=bc1qd2n20g6phmnkxcdhrznqfes3mdxefpslywy67v)
+![BTC QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=bc1q5yga8eluxk7cn4pc7k36lwee06mwt5gtre8nrm)
+
+### Bitcoin Cash
+bitcoincash:qp4gapsmpt75nh7clp64dhae2myhl9h8tg2f77w652
+
+![Bitcoin_Cash QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=bitcoincash:qp4gapsmpt75nh7clp64dhae2myhl9h8tg2f77w652)
